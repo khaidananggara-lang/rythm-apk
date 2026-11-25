@@ -1,0 +1,2 @@
+{"name":"rythm","version":"1.0.0","private":true,"scripts":{"deploy":"wrangler deploy","dev":"wrangler dev","apk":"cap sync android && cap open android"},
+"devDependencies":{"wrangler":"^4","@capacitor/cli":"^6"},"dependencies":{"@capacitor/core":"^6","@capacitor/android":"^6"}}
