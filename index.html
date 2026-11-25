@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111111">
+<title>RYTHM</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{--bg:#111;--panel:#1a1a1a;--line:#2b2b2b;--text:#ececec;--mute:#8c8c8c;--acc:#ff6a3d;--nav:calc(49px + env(safe-area-inset-bottom))}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+h2{font-size:15px;font-weight:600;margin:24px 16px 10px}
+.mute{color:var(--mute)}
+.pad{padding:0 16px}
+
+header{padding:14px 16px 4px;font-weight:700;letter-spacing:.14em;font-size:14px}
+main{padding-bottom:calc(var(--nav) + 80px)}
+.view{display:none}
+.view.on{display:block}
+
+/* daftar lagu */
+.item{display:flex;gap:12px;align-items:center;padding:8px 16px;cursor:pointer}
+.item:active{background:var(--panel)}
+.item .tx{min-width:0;flex:1}
+.t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.s{color:var(--mute);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cover{width:48px;height:48px;flex:none;background:var(--panel);border-radius:3px;overflow:hidden}
+.cover img{display:block;width:100%;height:100%;object-fit:cover}
+.item.cur .t{color:var(--acc)}
+
+/* rak horizontal */
+.xrow{display:flex;gap:12px;overflow-x:auto;padding:0 16px;scrollbar-width:none}
+.xrow::-webkit-scrollbar{display:none}
+.card{width:136px;flex:none;cursor:pointer}
+.card .cover{width:136px;height:136px}
+.card .t{margin-top:6px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+
+/* cari */
+.sbox{padding:10px 16px 0}
+.sbox input{width:100%;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:4px;outline:none}
+.sbox input:focus{border-color:var(--mute)}
+.types{display:flex;gap:18px;padding:12px 16px 6px}
+.types button{background:none;border:0;padding:4px 0;color:var(--mute);border-bottom:2px solid transparent}
+.types button.on{color:var(--text);border-color:var(--acc)}
+.sug div{padding:10px 16px;border-bottom:1px solid var(--line);cursor:pointer}
+
+/* halaman album/artis */
+#detail{position:fixed;left:0;right:0;top:0;bottom:var(--nav);background:var(--bg);z-index:10;overflow:auto;padding-bottom:90px;display:none}
+#detail.on{display:block}
+.back{background:none;border:0;padding:14px 16px;color:var(--mute)}
+.dh{display:flex;gap:14px;padding:0 16px 12px;align-items:flex-end}
+.dh .cover{width:112px;height:112px}
+.dh h1{font-size:18px;margin:0 0 2px;line-height:1.2}
+
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:8px 14px}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#111;font-weight:600}
+.msg{padding:24px 16px;color:var(--mute)}
+
+/* navigasi bawah */
+nav{position:fixed;left:0;right:0;bottom:0;height:var(--nav);padding-bottom:env(safe-area-inset-bottom);background:var(--bg);border-top:1px solid var(--line);display:flex;z-index:15}
+nav button{flex:1;background:none;border:0;color:var(--mute);font-size:13px}
+nav button.on{color:var(--text);font-weight:600}
+
+/* pemutar */
+#np{position:fixed;left:0;right:0;bottom:var(--nav);background:var(--panel);border-top:1px solid var(--line);z-index:20;display:none}
+#np.on{display:block}
+#np .prog{height:2px;background:var(--line)}
+#np .prog i{display:block;height:100%;width:0;background:var(--acc)}
+.main{display:flex;align-items:center;gap:12px;padding:6px 12px 6px 6px}
+#art{width:48px;height:48px;flex:none;background:var(--bg);border-radius:3px;overflow:hidden}
+#art img{display:block;width:100%;height:100%;object-fit:cover}
+.meta{flex:1;min-width:0;cursor:pointer}
+.ico{background:none;border:0;width:44px;height:44px;display:grid;place-items:center;padding:0}
+.ico svg{width:24px;height:24px;fill:currentColor}
+.full,.top{display:none}
+
+#np.open{top:0;bottom:0;z-index:40;overflow:auto;background:var(--bg);border:0}
+#np.open .prog{display:none}
+#np.open .top{display:flex;padding:8px 8px 0}
+#np.open .top button{background:none;border:0;padding:10px 8px;color:var(--mute)}
+#np.open .main{display:block;padding:0}
+#np.open #art{width:min(calc(100% - 32px),340px);height:auto;aspect-ratio:1;margin:12px auto 0;border-radius:4px}
+#np.open .meta{padding:16px 16px 0;cursor:default}
+#np.open .meta .t{font-size:18px;font-weight:600;white-space:normal}
+#np.open #mini-pp{display:none}
+#np.open .full{display:block;padding:0 16px 24px}
+
+.seek{display:flex;align-items:center;gap:10px;margin:14px 0 2px;color:var(--mute);font-size:12px;font-variant-numeric:tabular-nums}
+.seek input{flex:1;accent-color:var(--acc)}
+.ctl{display:flex;justify-content:center;gap:12px;align-items:center}
+.ctl .ico{width:56px;height:56px}
+.ctl .ico svg{width:32px;height:32px}
+.ctl .big svg{width:44px;height:44px}
+.acts{display:flex;gap:10px;margin:8px 0 4px}
+#lyr{white-space:pre-wrap;color:#cfcfcf;line-height:1.6;padding:12px 0;display:none}
+#np h3{font-size:13px;font-weight:600;color:var(--mute);margin:22px 0 4px;text-transform:uppercase;letter-spacing:.06em}
+#np .item{padding-left:0;padding-right:0}
+</style>
+</head>
+<body>
+<header>RYTHM</header>
+
+<main>
+  <section id="v-home" class="view on"></section>
+
+  <section id="v-search" class="view">
+    <div class="sbox"><input id="q" type="search" placeholder="Cari lagu, album, artis" autocomplete="off" enterkeyhint="search"></div>
+    <div class="types" id="types">
+      <button data-t="song" class="on">Lagu</button>
+      <button data-t="album">Album</button>
+      <button data-t="artist">Artis</button>
+    </div>
+    <div id="sug" class="sug"></div>
+    <div id="res"></div>
+  </section>
+
+  <section id="v-lib" class="view"></section>
+</main>
+
+<div id="detail"></div>
+
+<div id="np">
+  <div class="prog"><i id="bar"></i></div>
+  <div class="top"><button id="close">Tutup</button></div>
+  <div class="main">
+    <div id="art"><img id="artimg" alt=""></div>
+    <audio id="au" preload="auto"></audio>
+    <div class="meta" id="meta"><div class="t" id="nt"></div><div class="s" id="na"></div></div>
+    <button class="ico" id="mini-pp" aria-label="Putar/Jeda"></button>
+  </div>
+  <div class="full">
+    <div class="seek"><span id="cur">0:00</span><input id="seek" type="range" min="0" max="1" step="1" value="0"><span id="dur">0:00</span></div>
+    <div class="ctl">
+      <button class="ico" id="prev" aria-label="Sebelumnya"></button>
+      <button class="ico big" id="pp" aria-label="Putar/Jeda"></button>
+      <button class="ico" id="next" aria-label="Berikutnya"></button>
+    </div>
+    <div class="acts">
+      <button class="btn" id="fav">Simpan</button>
+      <button class="btn" id="lbtn">Lirik</button>
+    </div>
+    <div id="lyr"></div>
+    <h3>Berikutnya</h3>
+    <div id="queue"></div>
+  </div>
+</div>
+
+<nav id="nav">
+  <button data-v="home" class="on">Beranda</button>
+  <button data-v="search">Cari</button>
+  <button data-v="lib">Pustaka</button>
+</nav>
+
+<script src="config.js"></script>
+<script>
+const API = (window.RYTHM_API || '').replace(/\/$/, '');
+const $ = s => document.querySelector(s);
+
+function h(tag, props, ...kids) {
+  const e = document.createElement(tag);
+  for (const k in props || {}) {
+    if (k === 'class') e.className = props[k];
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), props[k]);
+    else e.setAttribute(k, props[k]);
+  }
+  for (const c of kids.flat()) if (c != null) e.append(c);
+  return e;
+}
+
+async function api(path, params) {
+  const r = await fetch(API + path + '?' + new URLSearchParams(params || {}));
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.error) throw new Error(j.error || r.status);
+  return j;
+}
+
+const ICON = {
+  play: '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
+  pause: '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>',
+  prev: '<svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6L18 18V6z"/></svg>',
+  next: '<svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg>',
+};
+$('#prev').innerHTML = ICON.prev;
+$('#next').innerHTML = ICON.next;
+
+/* ---------- tampilan umum ---------- */
+const cover = src => h('div', { class: 'cover' }, src ? h('img', { src, loading: 'lazy', alt: '', onerror: e => e.target.remove() }) : null);
+
+function act(it, list) {
+  if (it.id) play(list, list.indexOf(it));
+  else if (it.bid) openDetail(it);
+}
+const row = (it, list) => h('div', { class: 'item', onclick: () => act(it, list) },
+  cover(it.img), h('div', { class: 'tx' }, h('div', { class: 't' }, it.title), h('div', { class: 's' }, it.sub)));
+const card = (it, list) => h('div', { class: 'card', onclick: () => act(it, list) },
+  cover(it.img), h('div', { class: 't' }, it.title), h('div', { class: 's' }, it.sub));
+const shelf = s => h('section', {}, h('h2', {}, s.title), h('div', { class: 'xrow' }, s.items.map(i => card(i, s.items))));
+const note = (t, retry) => h('div', { class: 'msg' }, t, retry ? [h('br'), h('br'), h('button', { class: 'btn', onclick: retry }, 'Coba lagi')] : null);
+
+/* ---------- tab ---------- */
+function showView(v) {
+  document.querySelectorAll('.view').forEach(e => e.classList.toggle('on', e.id === 'v-' + v));
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  if (v === 'lib') renderLib();
+  if (v === 'search') $('#q').focus();
+  scrollTo(0, 0);
+}
+$('#nav').addEventListener('click', e => {
+  const v = e.target.dataset.v;
+  if (!v) return;
+  const n = dstack.length;
+  if (n) { dstack.length = 0; $('#detail').classList.remove('on'); history.go(-n); }
+  showView(v);
+});
+
+/* ---------- beranda ---------- */
+async function loadHome() {
+  const box = $('#v-home');
+  box.replaceChildren(note('Memuat…'));
+  try {
+    const d = await api('/api/home');
+    if (!d.sections.length) throw new Error('kosong');
+    box.replaceChildren(...d.sections.map(shelf));
+  } catch (e) {
+    box.replaceChildren(note('Beranda tidak bisa dimuat. Periksa koneksi atau alamat server di config.js.', loadHome));
+  }
+}
+
+/* ---------- cari ---------- */
+let stype = 'song', sugTimer;
+$('#types').addEventListener('click', e => {
+  if (!e.target.dataset.t) return;
+  stype = e.target.dataset.t;
+  document.querySelectorAll('#types button').forEach(b => b.classList.toggle('on', b === e.target));
+  if ($('#q').value.trim()) search($('#q').value.trim());
+});
+$('#q').addEventListener('input', e => {
+  clearTimeout(sugTimer);
+  const q = e.target.value.trim();
+  if (!q) { $('#sug').replaceChildren(); return; }
+  sugTimer = setTimeout(async () => {
+    try {
+      const d = await api('/api/suggest', { q });
+      if ($('#q').value.trim() !== q) return;
+      $('#sug').replaceChildren(...d.items.map(s => h('div', { onclick: () => { $('#q').value = s; search(s); } }, s)));
+    } catch (_) {}
+  }, 200);
+});
+$('#q').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.value.trim()) { search(e.target.value.trim()); e.target.blur(); }
+});
+async function search(q) {
+  $('#sug').replaceChildren();
+  $('#res').replaceChildren(note('Mencari…'));
+  try {
+    const d = await api('/api/search', { q, type: stype });
+    $('#res').replaceChildren(...(d.items.length ? d.items.map(i => row(i, d.items)) : [note('Tidak ada hasil.')]));
+  } catch (e) {
+    $('#res').replaceChildren(note('Pencarian gagal.', () => search(q)));
+  }
+}
+
+/* ---------- pustaka ---------- */
+let favs = [];
+try { favs = JSON.parse(localStorage.getItem('rythm.favs') || '[]'); } catch (_) {}
+const isFav = id => favs.some(f => f.id === id);
+function toggleFav(it) {
+  favs = isFav(it.id) ? favs.filter(f => f.id !== it.id) : [{ id: it.id, title: it.title, sub: it.sub, img: it.img }, ...favs];
+  try { localStorage.setItem('rythm.favs', JSON.stringify(favs)); } catch (_) {}
+  paintFav();
+  if ($('#v-lib').classList.contains('on')) renderLib();
+}
+function renderLib() {
+  $('#v-lib').replaceChildren(h('h2', {}, 'Lagu tersimpan'),
+    favs.length ? favs.map(f => row(f, favs)) : note('Belum ada. Buka pemutar lalu tekan Simpan.'));
+}
+
+/* ---------- halaman album / artis ---------- */
+const dstack = [], cache = new Map();
+function openDetail(it) {
+  dstack.push(it);
+  history.pushState({ d: dstack.length }, '');
+  renderDetail();
+}
+async function renderDetail() {
+  const it = dstack[dstack.length - 1], box = $('#detail');
+  if (!it) { box.classList.remove('on'); return; }
+  const back = h('button', { class: 'back', onclick: () => history.back() }, '‹ Kembali');
+  box.classList.add('on');
+  box.replaceChildren(back, note('Memuat…'));
+  box.scrollTop = 0;
+  try {
+    const d = cache.get(it.bid) || await api('/api/browse', { id: it.bid });
+    cache.set(it.bid, d);
+    if (dstack[dstack.length - 1] !== it) return;
+    const img = d.img || it.img;
+    const songs = d.items.map(s => ({ ...s, img: s.img || img }));
+    box.replaceChildren(back,
+      h('div', { class: 'dh' }, cover(img),
+        h('div', {}, h('h1', {}, d.title || it.title), h('div', { class: 's' }, d.sub || it.sub),
+          songs.length ? h('div', { style: 'margin-top:10px' }, h('button', { class: 'btn pri', onclick: () => play(songs, 0) }, 'Putar semua')) : null)),
+      songs.map(s => row(s, songs)),
+      d.sections.map(shelf),
+      !songs.length && !d.sections.length ? note('Tidak ada isi yang bisa ditampilkan.') : null);
+  } catch (e) {
+    box.replaceChildren(back, note('Gagal memuat.', renderDetail));
+  }
+}
+
+/* ---------- pemutar ---------- */
+const au = $('#au');
+let queue = [], qi = -1, playing = false, dragging = false, failed = 0;
+const more = new Set(), lyrCache = new Map();
+
+function play(list, i) {
+  const it = list[i];
+  queue = list.filter(x => x.id);
+  qi = queue.indexOf(it);
+  start();
+}
+function start() {
+  const it = queue[qi];
+  $('#np').classList.add('on');
+  $('#nt').textContent = it.title;
+  $('#na').textContent = it.sub;
+  const img = $('#artimg');
+  img.src = it.img || '';
+  img.style.display = it.img ? '' : 'none';
+  $('#lyr').style.display = 'none';
+  $('#lyr').textContent = '';
+  paintFav();
+  renderQueue();
+  au.src = API + '/api/stream?id=' + encodeURIComponent(it.id);
+  au.play().catch(() => {});
+  extend();
+  try {
+    const ms = navigator.mediaSession;
+    ms.metadata = new MediaMetadata({ title: it.title, artist: it.sub, artwork: it.img ? [{ src: it.img, sizes: '360x360' }] : [] });
+    ms.setActionHandler('nexttrack', next);
+    ms.setActionHandler('previoustrack', prev);
+    ms.setActionHandler('play', toggle);
+    ms.setActionHandler('pause', toggle);
+  } catch (_) {}
+}
+async function extend() {
+  const it = queue[qi];
+  if (!it || more.has(it.id) || queue.length - qi > 3) return;
+  more.add(it.id);
+  try {
+    const d = await api('/api/next', { id: it.id });
+    const have = new Set(queue.map(x => x.id));
+    d.items.forEach(x => { if (!have.has(x.id)) queue.push(x); });
+    renderQueue();
+  } catch (_) {}
+}
+async function next() {
+  if (qi >= queue.length - 1) await extend();
+  if (qi < queue.length - 1) { qi++; start(); }
+}
+function prev() {
+  if (au.currentTime > 4) { au.currentTime = 0; return; }
+  if (qi > 0) { qi--; start(); }
+}
+function toggle() {
+  if (!au.src) return;
+  if (au.paused) au.play().catch(() => {}); else au.pause();
+}
+
+au.addEventListener('play', () => { playing = true; paintPlay(); });
+au.addEventListener('pause', () => { playing = false; paintPlay(); });
+au.addEventListener('playing', () => { failed = 0; const it = queue[qi]; if (it) $('#na').textContent = it.sub; });
+au.addEventListener('ended', next);
+au.addEventListener('error', () => {
+  if (!queue[qi]) return;
+  $('#na').textContent = 'Tidak bisa diputar, lanjut ke lagu berikutnya…';
+  if (++failed < 3) setTimeout(next, 1200);
+  else { playing = false; paintPlay(); $('#na').textContent = 'Gagal memutar. Cek /api/player?id=' + queue[qi].id; }
+});
+
+function paintPlay() {
+  $('#pp').innerHTML = $('#mini-pp').innerHTML = playing ? ICON.pause : ICON.play;
+}
+paintPlay();
+function paintFav() {
+  const it = queue[qi];
+  $('#fav').textContent = it && isFav(it.id) ? 'Tersimpan' : 'Simpan';
+}
+function renderQueue() {
+  const rest = queue.slice(qi + 1);
+  $('#queue').replaceChildren(...(rest.length ? rest.map(x => row(x, queue)) : [note('Memuat saran lagu…')]));
+}
+
+const clock = s => { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+au.addEventListener('timeupdate', () => {
+  const d = isFinite(au.duration) ? au.duration : 0, c = au.currentTime || 0;
+  $('#bar').style.width = d ? (c / d * 100) + '%' : '0';
+  if (dragging) return;
+  $('#seek').max = Math.floor(d) || 1;
+  $('#seek').value = Math.floor(c);
+  $('#cur').textContent = clock(c);
+  $('#dur').textContent = clock(d);
+});
+
+$('#seek').addEventListener('input', e => { dragging = true; $('#cur').textContent = clock(e.target.value); });
+$('#seek').addEventListener('change', e => { dragging = false; au.currentTime = +e.target.value; });
+$('#pp').onclick = $('#mini-pp').onclick = toggle;
+$('#prev').onclick = prev;
+$('#next').onclick = next;
+$('#fav').onclick = () => queue[qi] && toggleFav(queue[qi]);
+$('#lbtn').onclick = async () => {
+  const box = $('#lyr'), it = queue[qi];
+  if (!it) return;
+  if (box.style.display === 'block') { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.textContent = 'Memuat…';
+  try {
+    if (!lyrCache.has(it.id)) lyrCache.set(it.id, (await api('/api/lyrics', { id: it.id })).text);
+    if (queue[qi] === it) box.textContent = lyrCache.get(it.id) || 'Lirik tidak tersedia untuk lagu ini.';
+  } catch (_) { box.textContent = 'Lirik gagal dimuat.'; }
+};
+
+$('#meta').onclick = () => {
+  const np = $('#np');
+  if (np.classList.contains('open')) return;
+  np.classList.add('open');
+  history.pushState({ p: 1 }, '');
+};
+$('#close').onclick = () => history.back();
+addEventListener('popstate', () => {
+  const np = $('#np');
+  if (np.classList.contains('open')) { np.classList.remove('open'); return; }
+  if (dstack.length) { dstack.pop(); renderDetail(); }
+});
+
+/* ---------- mulai ---------- */
+loadHome();
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
